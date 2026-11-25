@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MedCare — Emergency Triage &amp; Patient Management</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-badge">+</div>
+      <div>
+        <h1>MedCare Emergency Portal</h1>
+        <p class="subtitle">Emergency Triage, Doctor Allocation &amp; Ward Operations</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="dbStatus" class="status-pill">Connecting...</span>
+      <button id="assignNextBtn" class="btn btn-emergency">Assign Next Urgent Patient to Doctor</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Hospital Capacity & Surge KPIs -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Waiting in Triage</span>
+        <strong id="kpiWaiting">0</strong>
+        <span class="kpi-sub">Patients awaiting doctor</span>
+      </div>
+      <div class="kpi-card critical-card">
+        <span class="kpi-label">Critical Cases (Level 1)</span>
+        <strong id="kpiCritical">0</strong>
+        <span class="kpi-sub">Immediate resuscitation priority</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Active Treatment</span>
+        <strong id="kpiInTreatment">0</strong>
+        <span class="kpi-sub">Currently with physicians</span>
+      </div>
+      <div class="kpi-card success-card">
+        <span class="kpi-label">Available Doctors</span>
+        <strong id="kpiDoctors">0 / 0</strong>
+        <span class="kpi-sub">Ready for immediate duty</span>
+      </div>
+    </section>
+
+    <!-- Registration & Doctor Duty Row -->
+    <section class="grid-two">
+      <!-- Patient Registration -->
+      <div class="card">
+        <div class="card-head">
+          <h2>Emergency Patient Registration</h2>
+          <span class="card-desc">Register incoming patients and assign triage severity</span>
+        </div>
+        <form id="registerForm" class="form-grid">
+          <div class="field">
+            <label for="ptName">Full Name</label>
+            <input type="text" id="ptName" placeholder="e.g. Neha Sharma" required />
+          </div>
+          <div class="field">
+            <label for="ptAge">Age</label>
+            <input type="number" id="ptAge" min="0" max="120" placeholder="e.g. 54" required />
+          </div>
+          <div class="field">
+            <label for="ptLevel">Emergency Severity</label>
+            <select id="ptLevel">
+              <option value="1">Level 1 — Critical (Life-Threatening / Severe Hypoxia)</option>
+              <option value="2">Level 2 — Severe (High Fever / Chest Pain)</option>
+              <option value="3" selected>Level 3 — Moderate (Stable / Observation)</option>
+              <option value="4">Level 4 — Mild (Outpatient / Routine)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="ptId">Patient ID (Optional)</label>
+            <input type="text" id="ptId" placeholder="Auto-generated if blank" />
+          </div>
+          <div class="field full-span">
+            <label for="ptSymptoms">Clinical Symptoms &amp; Vitals</label>
+            <input type="text" id="ptSymptoms" placeholder="e.g. SpO2 86%, shortness of breath, fever 102F" required />
+          </div>
+          <button type="submit" class="btn btn-primary full-span">Register Patient into Triage</button>
+        </form>
+      </div>
+
+      <!-- On-Duty Doctors Panel -->
+      <div class="card">
+        <div class="card-head">
+          <h2>On-Duty Medical Staff</h2>
+          <span class="card-desc">Live doctor availability and current patient assignments</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Physician</th>
+                <th>Specialty</th>
+                <th>Status</th>
+                <th>Assigned Patient</th>
+              </tr>
+            </thead>
+            <tbody id="doctorsBody"></tbody>
+          </table>
+        </div>
+        <form id="addDoctorForm" class="inline-form">
+          <input type="text" id="docName" placeholder="Add Doctor (e.g. Dr. Kavita Rao)" required />
+          <input type="text" id="docSpec" placeholder="Specialty (e.g. Cardiology)" required />
+          <button type="submit" class="btn btn-secondary">Add Doctor</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Emergency Waiting List -->
+    <section class="card">
+      <div class="table-header">
+        <div>
+          <h2>Emergency Triage Waiting List</h2>
+          <span class="card-desc">Automatically ordered by medical urgency and arrival time</span>
+        </div>
+        <div class="controls">
+          <input type="text" id="lookupInput" placeholder="Search Patient ID or Name..." />
+          <button id="lookupBtn" class="btn btn-primary">Find Patient</button>
+          <button id="resetLookupBtn" class="btn btn-secondary">Show Waiting List</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Queue #</th>
+              <th>Patient ID</th>
+              <th>Name &amp; Age</th>
+              <th>Symptoms / Vitals</th>
+              <th>Severity</th>
+              <th>Est. Wait</th>
+              <th>Registered</th>
+              <th>Escalate / Update Priority</th>
+            </tr>
+          </thead>
+          <tbody id="waitingBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Active Treatment & Patient Management Report -->
+    <section class="grid-two">
+      <div class="card">
+        <div class="card-head">
+          <h2>Active Treatment Ward</h2>
+          <span class="card-desc">Patients currently under physician care</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>Severity</th>
+                <th>Attending Doctor</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="treatmentBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-header">
+          <div>
+            <h2>Patient Management Summary Report</h2>
+            <span class="card-desc">Discharged cases and shift throughput overview</span>
+          </div>
+          <button id="printReportBtn" class="btn btn-secondary">Print / Export Report</button>
+        </div>
+        <div id="reportSummaryBox" class="report-box"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Patient Name</th>
+                <th>Treated By</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="dischargedBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
